@@ -16,6 +16,7 @@ import pandas as pd
 import yfinance as yf
 
 FIELD_MAP: dict[str, str] = {
+    "longName":                 "company_name",
     "trailingPE":               "trailing_pe",
     "forwardPE":                "forward_pe",
     "marketCap":                "market_cap",
@@ -38,6 +39,7 @@ _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS fundamentals (
     ticker                      TEXT    NOT NULL,
     as_of_date                  TEXT    NOT NULL,
+    company_name                TEXT,
     trailing_pe                 REAL,
     forward_pe                  REAL,
     market_cap                  REAL,
@@ -61,6 +63,7 @@ CREATE TABLE IF NOT EXISTS fundamentals (
 
 # Columns added after the initial schema — applied as migrations on older DBs.
 _NEW_COLUMNS: dict[str, str] = {
+    "company_name":               "TEXT",
     "target_median_price":        "REAL",
     "recommendation_key":         "TEXT",
     "recommendation_mean":        "REAL",

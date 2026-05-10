@@ -23,6 +23,13 @@ ticker
   The exchange ticker symbol for the stock (e.g. AAPL, MSFT).
   Source: user input.
 
+company_name
+  The full legal or commonly used company name (e.g. "Apple Inc.", "Microsoft
+  Corporation").
+  Source: fundamentals DB (Yahoo Finance field: longName).
+  Use: Purely informational — makes results easier to read without looking up
+  tickers.  Not used as a filter criterion.
+
 ================================================================================
 SECTION 2: COMPANY CLASSIFICATION
 ================================================================================

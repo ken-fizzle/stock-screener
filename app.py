@@ -37,7 +37,7 @@ BUILTIN_LISTS: dict[str, Path] = {
 
 DISPLAY_COLUMNS = [
     # Identifiers & company info
-    "ticker", "sector", "industry",
+    "ticker", "company_name", "sector", "industry",
     # Valuation
     "market_cap", "trailing_pe", "forward_pe", "price_to_book", "peg_ratio",
     # Risk / income
@@ -350,6 +350,21 @@ def _render_sidebar_filters(db_populated: bool) -> dict:
 st.set_page_config(page_title="Stock Screener", layout="wide")
 st.title("Stock Screener")
 
+# --- Data dictionary download (always visible) ---
+_dict_path = Path("field_dictionary.txt")
+if _dict_path.exists():
+    col_dd, col_txt = st.columns([1, 6])
+    col_dd.download_button(
+        label="⬇ Data Dictionary",
+        data=_dict_path.read_bytes(),
+        file_name="field_dictionary.txt",
+        mime="text/plain",
+    )
+    col_txt.caption(
+        "Download the complete data dictionary (TXT) for definitions of every "
+        "field in the results table and exported CSV."
+    )
+
 # --- Sidebar input section ---
 st.sidebar.header("Ticker Input")
 input_mode = st.sidebar.radio(
@@ -503,12 +518,14 @@ if "combined_df" in st.session_state:
     cols[2].metric("After tech. filter",  len(filtered))
     cols[3].metric("Run at",             run_ts.strftime("%H:%M:%S"))
 
+    # Remove the printed excl_by_filter tickers as requested by user
     if excl_by_filter:
         st.warning(
             f"{len(excl_by_filter)} ticker(s) excluded by fundamental filters "
-            f"before OHLCV fetch: {', '.join(sorted(excl_by_filter)[:20])}"
-            + (" …" if len(excl_by_filter) > 20 else "")
-        )
+            f"before OHLCV fetch."
+        )#: {', '.join(sorted(excl_by_filter)[:20])}"
+    #        + (" …" if len(excl_by_filter) > 20 else "")
+    #    )
     if missing_from_db:
         st.warning(
             f"{len(missing_from_db)} ticker(s) fetched but absent from fundamentals DB "
@@ -537,4 +554,5 @@ if "combined_df" in st.session_state:
             mime="text/csv",
         )
 else:
-    st.info("Enter tickers in the sidebar and click **▶ Run Screen** to begin.")
+    st.info("From the sidebar, select tickers (from built-in list by default), select any filters to apply, and click **▶ Run Screen** to begin.")
+    st.info("NOTE - fundamental filters are not sourced live, but instead updated manually on a quarterly cadence by the developer.  This data is currently frozen in time as of May 10, 2026")

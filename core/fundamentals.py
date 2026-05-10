@@ -7,7 +7,7 @@ import pandas as pd
 
 # Explicit column list — never SELECT *; guards against schema drift.
 _SELECT_COLS = (
-    "f.ticker, f.trailing_pe, f.forward_pe, f.market_cap, "
+    "f.ticker, f.company_name, f.trailing_pe, f.forward_pe, f.market_cap, "
     "f.sector, f.industry, f.beta, f.dividend_yield, f.price_to_book, "
     "f.target_median_price, f.recommendation_key, f.recommendation_mean, "
     "f.number_of_analyst_opinions, f.held_percent_insiders, "
@@ -16,7 +16,7 @@ _SELECT_COLS = (
 )
 
 FUNDAMENTALS_COLUMNS = [
-    "ticker", "trailing_pe", "forward_pe", "market_cap",
+    "ticker", "company_name", "trailing_pe", "forward_pe", "market_cap",
     "sector", "industry", "beta", "dividend_yield", "price_to_book",
     "target_median_price", "recommendation_key", "recommendation_mean",
     "number_of_analyst_opinions", "held_percent_insiders",
