@@ -1,0 +1,353 @@
+================================================================================
+STOCK SCREENER — OUTPUT FIELD DICTIONARY
+================================================================================
+
+This file defines every column present in the downloadable CSV output from the
+Stock Screener.  Fields are grouped by category.  Each entry includes a plain-
+language definition and practical notes for investors who are newer to these
+metrics.
+
+Data is sourced from two places:
+  • Fundamental fields  →  local SQLite database (refreshed quarterly via the
+                            Fundamentals Refresh page or the CLI script)
+  • Technical fields    →  computed from 5-year daily OHLCV history fetched
+                            from Yahoo Finance and cached locally
+
+All indicator values reflect the MOST RECENT trading day in the cached history.
+
+================================================================================
+SECTION 1: IDENTIFIERS
+================================================================================
+
+ticker
+  The exchange ticker symbol for the stock (e.g. AAPL, MSFT).
+  Source: user input.
+
+================================================================================
+SECTION 2: COMPANY CLASSIFICATION
+================================================================================
+
+sector
+  The broad economic sector the company belongs to (e.g. Technology, Energy,
+  Healthcare).
+  Source: fundamentals DB.
+  Use: Sector filters let you focus a screen on industries you follow or
+  diversify across sectors you're underweight in.
+
+industry
+  A more granular classification within a sector (e.g. "Consumer Electronics"
+  within Technology, "Oil & Gas Integrated" within Energy).
+  Source: fundamentals DB.
+  Use: Useful for peer comparisons — screening within a single industry removes
+  noise from cross-sector valuation differences.
+
+================================================================================
+SECTION 3: VALUATION METRICS
+================================================================================
+
+market_cap
+  Total market capitalisation: share price × shares outstanding.  Displayed
+  with abbreviations (e.g. 1.2T, 450B, 50M).  Raw CSV value is in USD.
+  Source: fundamentals DB.
+  Use: A rough proxy for company size.  Large-cap (>$10B) stocks tend to be
+  more liquid and stable; small-cap (<$2B) stocks can be more volatile but may
+  offer higher growth potential.  Many institutional investors are restricted
+  to a minimum market cap.
+
+trailing_pe  (Trailing Price-to-Earnings)
+  Share price divided by actual earnings per share over the past 12 months.
+  A P/E of 20 means investors are paying $20 for each $1 of current earnings.
+  Source: fundamentals DB.
+  Use: Compare within sectors — a P/E of 30 is normal in high-growth tech but
+  expensive for a utility.  Negative P/E means the company had a net loss;
+  the "exclude negative" filter is useful when you only want profitable companies.
+  Rule of thumb: lower P/E may indicate undervaluation, but also check growth
+  prospects before concluding a stock is "cheap."
+
+forward_pe  (Forward Price-to-Earnings)
+  Share price divided by analyst consensus EPS estimates for the next 12 months.
+  Source: fundamentals DB.
+  Use: Forward P/E reflects market expectations of future profitability.  A
+  forward P/E well below trailing P/E implies the market expects strong earnings
+  growth.  Treat with caution — analyst estimates can be wrong.
+
+price_to_book  (Price-to-Book Ratio)
+  Share price divided by book value per share (total assets minus total
+  liabilities).  A P/B of 1.0 means the stock trades at exactly its accounting
+  net asset value.
+  Source: fundamentals DB.
+  Use: More meaningful for capital-intensive sectors (banks, insurance,
+  manufacturing) than for asset-light technology companies.  P/B < 1 can signal
+  deep value or financial distress — always investigate the reason.
+
+peg_ratio  (Price/Earnings-to-Growth Ratio)
+  Trailing P/E divided by the company's expected annual earnings growth rate
+  (in percent).  A PEG of 1.0 means the P/E equals the growth rate — often
+  considered "fairly valued."
+  Source: fundamentals DB (Yahoo Finance field: pegRatio).
+  Use: Adjusts P/E for growth, making it easier to compare a fast-growing
+  company against a slow grower.  PEG < 1 may indicate undervaluation relative
+  to growth; PEG > 2 suggests the market is pricing in very optimistic
+  expectations.  Not meaningful if earnings or growth estimates are negative.
+
+================================================================================
+SECTION 4: RISK & INCOME
+================================================================================
+
+beta
+  A measure of the stock's price volatility relative to the broad market
+  (typically the S&P 500).  Beta = 1.0 means the stock historically moves in
+  line with the market.
+  Source: fundamentals DB.
+  Use: Beta > 1 → amplified market moves (higher risk, potentially higher
+  reward).  Beta < 1 → more muted moves (defensive).  Beta < 0 is rare and
+  means the stock tends to move against the market (e.g. some gold miners).
+  Useful for portfolio construction: adding low-beta stocks reduces overall
+  portfolio volatility.
+
+dividend_yield
+  Annual dividend per share divided by the current share price, expressed as a
+  percentage (e.g. 0.015 stored as 1.50% in the display).
+  Source: fundamentals DB.
+  Use: Income investors screen for a minimum yield.  Very high yields
+  (>8–10%) can indicate dividend risk — the market may be pricing in a coming
+  cut.  Always check the payout ratio (dividends ÷ earnings) to gauge
+  sustainability.
+
+================================================================================
+SECTION 5: ANALYST RATINGS
+================================================================================
+
+recommendation_key
+  The analyst consensus rating as a text label.  Common values:
+    strongBuy   — majority of analysts rate as a strong buy
+    buy         — consensus leans toward buying
+    hold        — neutral; analysts see limited near-term upside or downside
+    underperform— mild negative; expected to lag the market
+    sell        — analysts expect the price to decline
+  Source: fundamentals DB (Yahoo Finance field: recommendationKey).
+  Use: A quick qualitative filter.  Combine with recommendation_mean for a
+  more nuanced view.  Note that analyst ratings lag price moves and can be
+  biased by investment banking relationships.
+
+recommendation_mean
+  Analyst consensus rating on a numeric scale: 1.0 (Strong Buy) → 5.0 (Sell).
+  Most stocks cluster between 1.5 and 3.5.
+  Source: fundamentals DB (Yahoo Finance field: recommendationMean).
+  Use: Screening for mean < 2.0 targets stocks where the analyst community
+  is predominantly bullish.  Combine with number_of_analyst_opinions to
+  filter out thinly covered stocks where one or two outlier ratings dominate
+  the average.
+
+number_of_analyst_opinions
+  The number of analysts contributing to the consensus rating.
+  Source: fundamentals DB (Yahoo Finance field: numberOfAnalystOpinions).
+  Use: A minimum analyst coverage filter (e.g. >= 5) removes micro-cap stocks
+  with sparse coverage where the consensus mean is statistically unreliable.
+  Institutional-grade coverage is generally considered >= 10 analysts.
+
+target_median_price
+  The median price target set by analysts covering the stock.  Represents the
+  midpoint of analyst price forecasts for the next 12 months.
+  Source: fundamentals DB (Yahoo Finance field: targetMedianPrice).
+  Use: Compared against the current close price to compute upside_to_target.
+  The median is more robust than the mean against outlier estimates.
+
+upside_to_target  (Derived field — computed at screen time)
+  Formula: (target_median_price − Close) / Close × 100
+  Positive value = stock is trading below the analyst consensus target
+  (potential upside).  Negative value = stock already trades above target.
+  Source: computed from target_median_price (fundamentals DB) and Close
+  (technical data).
+  Use: Screen for stocks with meaningful analyst-implied upside (e.g. >= 15%).
+  Combine with recommendation_key = "buy" or "strongBuy" for a conviction
+  filter.  Remember that price targets are updated infrequently and may not
+  reflect very recent news.
+
+================================================================================
+SECTION 6: OWNERSHIP & SHORT INTEREST
+================================================================================
+
+held_percent_insiders
+  The percentage of shares outstanding held by corporate insiders (executives,
+  directors, and large shareholders classified as insiders under SEC rules).
+  Stored as a decimal (0.05 = 5%); displayed as a percentage.
+  Source: fundamentals DB (Yahoo Finance field: heldPercentInsiders).
+  Use: High insider ownership (>20%) suggests management has skin in the game —
+  often seen as a positive alignment signal.  Very low insider ownership may
+  not be a concern for large-cap companies but can be a flag for smaller ones.
+
+held_percent_institutions
+  The percentage of shares outstanding held by institutional investors (mutual
+  funds, ETFs, pension funds, hedge funds, etc.).
+  Stored as a decimal (0.65 = 65%); displayed as a percentage.
+  Source: fundamentals DB (Yahoo Finance field: heldPercentInstitutions).
+  Use: High institutional ownership (>70%) indicates widespread institutional
+  confidence and tends to provide price stability.  Screening for rising
+  institutional ownership (across quarterly snapshots) can surface stocks
+  gaining institutional interest.
+
+short_percent_of_float
+  The percentage of the float (shares available for public trading) currently
+  sold short.  Stored as a decimal (0.05 = 5%); displayed as a percentage.
+  Source: fundamentals DB (Yahoo Finance field: shortPercentOfFloat).
+  Use: High short interest (>15–20%) can mean the market is broadly bearish on
+  the stock — contrarian investors sometimes screen for high-short-interest
+  stocks expecting a short squeeze.  It can also mean informed traders have
+  identified fundamental problems.  Low short interest (<2%) generally
+  indicates the market is not anticipating significant problems.
+
+================================================================================
+SECTION 7: PRICE & VOLUME (TECHNICAL)
+================================================================================
+
+Close
+  The unadjusted closing price on the most recent trading day in the cached
+  history.  Note: this is the raw close, not the split- or dividend-adjusted
+  close.  Indicator math is performed on the same unadjusted series for
+  consistency.
+  Source: Yahoo Finance OHLCV history.
+
+Volume
+  The number of shares traded on the most recent trading day.
+  Source: Yahoo Finance OHLCV history.
+  Use: Absolute volume is less useful than relative volume (see RVOL_50 below).
+  Spikes in volume often precede or accompany significant price moves.
+
+================================================================================
+SECTION 8: MOMENTUM & VOLATILITY INDICATORS (TECHNICAL)
+================================================================================
+
+RSI_14  (Relative Strength Index, 14-period)
+  A momentum oscillator ranging from 0 to 100 that measures the speed and
+  magnitude of recent price changes.  Calculated over the last 14 trading days.
+  Commonly used thresholds: <30 = oversold, >70 = overbought.
+  Source: computed via pandas-ta on full 5-year history.
+  Use: Screen for oversold stocks (RSI < 30) for mean-reversion setups, or
+  strongly trending stocks (RSI > 50 and rising) for momentum strategies.
+  RSI divergence (price makes a new high but RSI does not) can warn of trend
+  exhaustion.
+
+RVOL_50  (Relative Volume vs. 50-day Average)
+  Today's volume divided by the 50-day simple moving average of volume.
+  RVOL = 1.0 means today's volume is exactly average; RVOL = 2.0 means twice
+  the average.
+  Source: computed from Yahoo Finance volume data.
+  Use: Elevated RVOL (>1.5) during a price breakout confirms institutional
+  participation.  High RVOL on a down day may indicate distribution (selling
+  pressure).  Useful for momentum and breakout screens.
+
+Pct_of_252_High  (Price as % of 52-week High)
+  Close / rolling 252-trading-day High.  A value of 0.98 means the stock is
+  2% below its 52-week high.
+  Source: computed from Yahoo Finance OHLCV.
+  Displayed as a percentage (e.g. 95.3%).
+  Use: Screen for breakout candidates (Pct_of_252_High >= 97–100%) — stocks
+  hitting new 52-week highs often continue upward.  Alternatively, screen for
+  deeply depressed stocks (<50%) for deep-value or turnaround plays.
+
+Pct_of_252_Low  (Price as % of 52-week Low)
+  Close / rolling 252-trading-day Low.  A value of 1.30 means the stock is
+  30% above its 52-week low.
+  Source: computed from Yahoo Finance OHLCV.
+  Displayed as a percentage (e.g. 130.0%).
+  Use: Complements Pct_of_252_High.  A value near 1.0 means the stock is near
+  its 52-week low — could signal distress or an entry opportunity depending on
+  context.
+
+================================================================================
+SECTION 9: MOVING AVERAGES (TECHNICAL)
+================================================================================
+
+Moving averages smooth out day-to-day price noise and help identify trends.
+When price is above a moving average, it generally indicates an uptrend for
+that timeframe; below indicates a downtrend.
+
+SMA_5   (5-period Simple Moving Average of Close)
+  Average of the last 5 closing prices.  Responds very quickly to price changes.
+  Use: Short-term trend / noise filter.  Traders watch for price to hold above
+  SMA_5 as a sign of near-term strength.
+
+SMA_50  (50-period Simple Moving Average of Close)
+  Average of the last 50 closing prices (~10 weeks).
+  Use: Intermediate-term trend.  The 50-day MA is widely watched; a cross of
+  the 50-day MA by the 200-day MA is called the "Golden Cross" (bullish) or
+  "Death Cross" (bearish).  Price holding above SMA_50 is a common institutional
+  screening criterion.
+
+SMA_100 (100-period Simple Moving Average of Close)
+  Average of the last 100 closing prices (~5 months).
+  Use: Intermediate-to-long-term trend support/resistance level.
+
+SMA_200 (200-period Simple Moving Average of Close)
+  Average of the last 200 closing prices (~10 months).
+  Use: The most widely watched long-term trend indicator.  Many institutional
+  investment rules require a stock to be above its 200-day MA.  Price
+  crossing above the 200-day MA after a prolonged decline is often seen as a
+  major bullish signal.  NaN for stocks with less than 200 trading days of
+  history.
+
+EMA_20  (20-period Exponential Moving Average of Close)
+  A 20-day moving average that weights recent prices more heavily than older
+  ones, making it react faster than a simple MA of the same length.
+  Use: Popular in momentum strategies.  EMA_20 is often used as a dynamic
+  support/resistance level in trending markets.  A stock consistently bouncing
+  off its EMA_20 is considered to be in a healthy uptrend.
+
+================================================================================
+SECTION 10: BOLLINGER BANDS (TECHNICAL)
+================================================================================
+
+Bollinger Bands consist of a middle band (20-day SMA) and two outer bands set
+2 standard deviations above and below the middle.  They expand during volatile
+periods and contract during quiet ones.
+
+BB_upper  (Upper Bollinger Band, 20-period, 2 std dev)
+  The upper boundary of the band.  Price touching or exceeding this level can
+  indicate the stock is extended (overbought in the short term) or is in a
+  strong trend (a "Bollinger squeeze" breakout).
+  Source: computed via pandas-ta.
+
+BB_middle  (Middle Bollinger Band = SMA_20)
+  The 20-day simple moving average — the centre of the band.  Often acts as
+  a support/resistance level during trending markets.
+  Source: computed via pandas-ta.
+
+BB_lower  (Lower Bollinger Band, 20-period, 2 std dev)
+  The lower boundary.  Price at or below BB_lower can indicate the stock is
+  oversold or experiencing a sharp breakdown.
+  Source: computed via pandas-ta.
+  Combined use: A common setup is to screen for stocks where Close < BB_lower
+  (oversold pullback in an otherwise uptrending stock) combined with RSI_14
+  < 35 for a mean-reversion entry.  Conversely, Close > BB_upper + RSI_14 > 70
+  may signal an extended short-term move.
+
+================================================================================
+NOTES FOR NEW INVESTORS
+================================================================================
+
+1. No single metric tells the full story.  Screens should be used to narrow
+   a large universe down to a shortlist for deeper research — not as a
+   buy/sell signal in isolation.
+
+2. Fundamental data is refreshed quarterly.  Prices and technical indicators
+   reflect the most recent cached trading day.  Make sure your fundamentals DB
+   is current before a screen that relies heavily on fundamental filters.
+
+3. NaN (missing) values appear as "—" in the display table and as empty cells
+   in the CSV.  A missing value typically means insufficient history
+   (e.g. a recent IPO) or that Yahoo Finance does not report the field for
+   that ticker.  The filter step automatically excludes rows where a filtered
+   column is NaN.
+
+4. upside_to_target is a derived field — it depends on the analyst consensus
+   price target, which is itself an estimate.  Treat it as a rough sentiment
+   indicator rather than a precise forecast.
+
+5. short_percent_of_float data from Yahoo Finance can lag by 2–4 weeks
+   (short interest is reported twice monthly).  Check the as_of_date column
+   to understand the age of the snapshot you are working with.
+
+================================================================================
+END OF FIELD DICTIONARY
+================================================================================
